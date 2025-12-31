@@ -13,7 +13,7 @@ Event-driven data infrastructure providing real-time ingestion, harmonization, a
 ## Quick Start
 ```bash
 # Clone repository
-git clone <repo-url>
+git clone https://github.com/Zenoguy/CLINICAL-TRIAL-PLATFORM.git
 cd clinical-trial-platform
 
 # Setup environment
