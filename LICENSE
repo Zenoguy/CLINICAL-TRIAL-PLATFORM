@@ -1,0 +1,99 @@
+
+---
+
+#### `Makefile`
+```makefile
+.PHONY: setup docker-up docker-down migrate test simulate run-ingestion clean
+
+# Setup development environment
+setup:
+	python -m venv venv
+	./venv/bin/pip install --upgrade pip
+	./venv/bin/pip install -r requirements.txt
+	./venv/bin/pip install -r requirements-dev.txt
+	cp .env.example .env
+	@echo "✅ Environment setup complete"
+
+# Docker operations
+docker-up:
+	docker-compose up -d
+	@echo "✅ Infrastructure running"
+
+docker-down:
+	docker-compose down
+	@echo "✅ Infrastructure stopped"
+
+docker-reset:
+	docker-compose down -v
+	docker-compose up -d
+	@echo "✅ Infrastructure reset"
+
+# Database operations
+migrate:
+	alembic upgrade head
+	@echo "✅ Database migrations applied"
+
+migrate-rollback:
+	alembic downgrade -1
+	@echo "✅ Rolled back one migration"
+
+reset-db:
+	python scripts/dev/reset_database.py
+	@echo "✅ Database reset"
+
+# Testing
+test:
+	pytest tests/ -v --cov=src --cov-report=html
+	@echo "✅ Tests complete. See htmlcov/index.html"
+
+test-unit:
+	pytest tests/unit/ -v
+
+test-integration:
+	pytest tests/integration/ -v
+
+test-performance:
+	pytest tests/performance/ -v
+
+# Data simulation
+simulate:
+	python scripts/dev/generate_test_data.py
+	@echo "✅ Test data generated"
+
+simulate-scenario:
+	@read -p "Scenario (normal|degradation|ae_cluster): " scenario; \\
+	python scripts/dev/run_simulation.py --scenario $$scenario
+
+# Run services
+run-ingestion:
+	python -m src.ingestion.main
+
+run-api:
+	uvicorn src.api.main:app --reload --port 8000
+
+# Code quality
+lint:
+	ruff check src/ tests/
+	mypy src/
+
+format:
+	black src/ tests/
+	isort src/ tests/
+
+# Utilities
+clean:
+	find . -type d -name __pycache__ -exec rm -rf {} +
+	find . -type f -name "*.pyc" -delete
+	rm -rf .pytest_cache htmlcov .coverage
+
+# Documentation
+docs:
+	cd docs && mkdocs serve
+
+# Monitoring
+metrics:
+	@echo "Opening Prometheus: <http://localhost:9090>"
+	@echo "Opening Grafana: <http://localhost:3000>"
+
+logs:
+	docker-compose logs -f ingestion-engine
