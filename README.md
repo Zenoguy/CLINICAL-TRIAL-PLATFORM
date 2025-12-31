@@ -33,3 +33,17 @@ make run-ingestion
 
 # Run tests
 make test
+```
+
+
+Status: 🚧 Under active development
+
+Goal:
+Build a latency-aware, auditable data ingestion and validation backbone
+for clinical trial intelligence.
+
+This repository currently contains:
+- Project structure
+- Environment setup (in progress)
+
+More documentation coming soon.
