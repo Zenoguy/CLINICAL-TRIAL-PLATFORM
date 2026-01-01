@@ -6,6 +6,18 @@ No thresholds or interpretations are defined here.
 
 ---
 
+## Naming Convention
+
+Metric names follow the pattern:
+
+`<group>__<base_metric>__[bucket_<n>]`
+
+Where:
+- `group` indicates the CPID domain (e.g. `cpmd`, `ssm`)
+- `base_metric` is derived from the CPID column header
+- `bucket_n` is used only when CPID provides repeated columns
+
+---
 ## `cpmd__page_action_status_source_rave_edc_bo4`
 
 - **Entity level**: subject
@@ -53,3 +65,7 @@ No thresholds or interpretations are defined here.
 - **Group**: SSM
 - **Buckets**: bucket_0 … bucket_5
 - **Description**: Operational metric derived directly from CPID EDC data.
+ 
+
+ ---
+>Buckets represent repeated CPID columns (e.g. Page Status.1, Page Status.2) and do not imply ordering, severity, or priority.
