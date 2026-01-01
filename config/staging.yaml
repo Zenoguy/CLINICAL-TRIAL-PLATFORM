@@ -1,0 +1,8 @@
+env: staging
+
+data:
+  cpid_root_dir: "/mnt/data/QC Anonymized Study Files"
+
+snapshot:
+  source_name: "CPID_EDC_Metrics"
+  timezone: "UTC"
