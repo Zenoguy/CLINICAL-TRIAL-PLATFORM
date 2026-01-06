@@ -1,20 +1,14 @@
 from pathlib import Path
 
-from core.config import get_settings
-from ingestion.cpid_extractor import extract_cpid_metrics
+from ingestion.coding_whodrug_extractor import extract_coding_whodrug_events
 from storage.supabase_writer import insert_dataframe
 
 
-TARGET_TABLE = "cpid_metric_snapshots"
+STUDY_ROOT_DIR = Path("QC Anonymized Study Files")
+TARGET_TABLE = "coding_whodrug_events"
 
 
-def main():
-    settings = get_settings()
-    root_dir = Path(settings.data.cpid_root_dir)
-
-    if not root_dir.exists():
-        raise FileNotFoundError(f"CPID root directory not found: {root_dir}")
-
+def run_coding_whodrug_ingestion():
     # ------------------------------------------------------------------
     # Counters / diagnostics
     # ------------------------------------------------------------------
@@ -23,44 +17,49 @@ def main():
     files_attempted = 0
     total_inserted = 0
 
-    print(f"📂 Scanning CPID root directory: {root_dir}")
+    print(f"📂 Scanning WHODrug root directory: {STUDY_ROOT_DIR}")
 
     # ------------------------------------------------------------------
     # Traverse study folders
     # ------------------------------------------------------------------
-    for study_dir in root_dir.iterdir():
+    for study_dir in STUDY_ROOT_DIR.iterdir():
         if not study_dir.is_dir():
             continue
 
         studies_seen += 1
         study_id = study_dir.name
 
-        for file_path in study_dir.glob("*.xlsx"):
-            name = file_path.name.lower()
+        for file in study_dir.glob("*.xlsx"):
+            name = file.name.lower()
 
-            # 🔑 Robust CPID discovery (no exact string match)
-            if not ("cpid" in name and "metric" in name):
+            # 🔑 Robust WHODrug discovery (covers ALL observed variants)
+            if not any(
+                k in name
+                for k in ["who", "whodd", "whodrug", "whodra"]
+            ):
                 continue
 
             studies_attempted.add(study_id)
             files_attempted += 1
 
             print(
-                f"\n▶ Processing CPID "
-                f"study_folder='{study_id}' "
-                f"file='{file_path.name}'"
+                f"\n▶ Processing WHODrug Coding "
+                f"study='{study_id}' file='{file.name}'"
             )
 
             # -------------------------------------------------
-            # 1️⃣ Extract CPID metrics
+            # 1️⃣ Extract WHODrug coding events
             # -------------------------------------------------
-            df = extract_cpid_metrics(str(file_path))
+            df = extract_coding_whodrug_events(
+                filepath=str(file),
+                study_id_override=study_id,
+            )
+
+            print(f"📦 Extracted {len(df)} WHODrug coding rows")
 
             if df.empty:
-                print("⚠️ No numeric metrics extracted — skipping")
+                print("⚠️ Empty extract — skipping insert")
                 continue
-
-            print(f"📦 Extracted {len(df)} metric rows")
 
             # -------------------------------------------------
             # 2️⃣ Insert into Supabase
@@ -68,6 +67,7 @@ def main():
             insert_dataframe(
                 df=df,
                 table_name=TARGET_TABLE,
+                batch_size=1000,
             )
 
             total_inserted += len(df)
@@ -76,7 +76,7 @@ def main():
     # Final diagnostic summary
     # ------------------------------------------------------------------
     print("\n" + "=" * 72)
-    print("📊 CPID INGESTION SUMMARY")
+    print("📊 WHODRUG CODING INGESTION SUMMARY")
     print("=" * 72)
     print(f"📁 Study folders found       : {studies_seen}")
     print(f"📂 Studies attempted         : {len(studies_attempted)}")
@@ -84,7 +84,7 @@ def main():
     print(f"📥 Total rows inserted       : {total_inserted}")
 
     skipped = {
-        d.name for d in root_dir.iterdir() if d.is_dir()
+        d.name for d in STUDY_ROOT_DIR.iterdir() if d.is_dir()
     } - studies_attempted
 
     if skipped:
@@ -93,10 +93,10 @@ def main():
     print("=" * 72)
 
     if files_attempted == 0:
-        print("⚠️ No CPID files were ingested.")
+        print("⚠️ No WHODrug files were ingested.")
     else:
-        print("✅ CPID ingestion completed successfully")
+        print("✅ WHODrug coding ingestion completed successfully")
 
 
 if __name__ == "__main__":
-    main()
+    run_coding_whodrug_ingestion()

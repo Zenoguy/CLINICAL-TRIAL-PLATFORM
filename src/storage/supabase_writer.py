@@ -1,6 +1,6 @@
-from typing import Iterable
 import math
 import pandas as pd
+from typing import Iterable
 
 from supabase import Client
 from storage.supabase_client import get_supabase_client
@@ -11,6 +11,24 @@ DEFAULT_BATCH_SIZE = 1000
 
 class SupabaseInsertError(RuntimeError):
     pass
+
+
+def clean_nan_values(records: list[dict]) -> list[dict]:
+    """Replace NaN values with None for JSON serialization."""
+    cleaned = []
+    for record in records:
+        cleaned_record = {}
+        for key, value in record.items():
+            # Check for NaN (works for both float nan and pd.NA)
+            if isinstance(value, float) and math.isnan(value):
+                cleaned_record[key] = None
+            elif pd.isna(value):
+                cleaned_record[key] = None
+            else:
+                cleaned_record[key] = value
+        cleaned.append(cleaned_record)
+    return cleaned
+
 
 def insert_rows(
     table_name: str,
@@ -66,9 +84,12 @@ def insert_dataframe(
     batch_size: int = DEFAULT_BATCH_SIZE,
     dry_run: bool = False,
 ) -> None:
+    records = df.to_dict(orient="records")
+    records = clean_nan_values(records)  # ✅ Clean NaN values
+    
     insert_rows(
         table_name=table_name,
-        rows=df.to_dict(orient="records"),
+        rows=records,
         batch_size=batch_size,
         dry_run=dry_run,
     )
