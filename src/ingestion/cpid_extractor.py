@@ -129,13 +129,20 @@ def extract_cpid_metrics(filepath: str) -> pd.DataFrame:
             if pd.isna(value):
                 continue
 
+            # 🔒 Enforce numeric-only metrics
+            numeric_value = pd.to_numeric(value, errors="coerce")
+
+            # Skip text / categorical / metadata columns
+            if pd.isna(numeric_value):
+                continue
+
             snapshots.append(
                 {
                     "entity_type": "subject",
                     "entity_id": subject_id,
                     "site_id": site_id,
                     "metric_name": normalize_metric(group, label),
-                    "metric_value": value,
+                    "metric_value": float(numeric_value),
                     "snapshot_time": snapshot_time,
                     "source": "CPID_EDC_Metrics",
                 }
@@ -153,3 +160,6 @@ def extract_cpid_metrics(filepath: str) -> pd.DataFrame:
             "source",
         ],
     )
+
+
+# TODO: add ingestion_run_id for lineage in production
